@@ -5,7 +5,7 @@
 BIN_NAME ?= os.bin
 ISO_NAME ?= os.iso
 ARCH ?= x86
-PROJDIRS = kernel drivers/$(ARCH) boot/$(ARCH) 
+PROJDIRS = kernel/common kernel/$(ARCH) drivers/$(ARCH) boot/$(ARCH) 
 LINKER_SCRIPT = linker.ld
 INCDIR := include
 

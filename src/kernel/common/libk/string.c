@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "kernel/libk/string.h"
+#include "kernel/common/libk/string.h"
 
 size_t strlen(const char* str) 
 {
@@ -27,4 +27,13 @@ void* memmove(void* destination, const void* source, size_t num) {
     }
 
     return destination;
+}
+
+void* memset(void* ptr, int value, size_t num) {
+    uint8_t val = (uint8_t) value;
+    uint8_t* dst = (uint8_t*) ptr;
+    for (size_t i = 0; i < num; i++) {
+        dst[i] = val;
+    }
+    return ptr;
 }

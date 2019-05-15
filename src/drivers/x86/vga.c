@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "drivers/vga.h"
-#include "kernel/libk/string.h"
+#include "kernel/common/libk/string.h"
 #include "drivers/io.h"
 
 #define VGA_WIDTH 80
@@ -115,4 +115,24 @@ void vga__writestring(const char* data)
 {
 	vga__write(data, strlen(data));
 }
- 
+
+void vga__writedec(uint32_t n) {
+    uint8_t digits[10]; // 10 is the maximal number of digits that
+                    // the decimal repr of an unsigned 32 bits
+                    // can have
+    size_t i = 0;
+
+    if (n == 0) {
+        digits[i++] = 0;
+    }
+
+    while (n > 0) {
+        digits[i] = (uint8_t) (n % 10); 
+        n /= 10;
+        i++;
+    }
+
+    for (; i > 0; i--) {
+        vga__putchar((char) (0x30 + digits[i-1]));
+    }
+}
