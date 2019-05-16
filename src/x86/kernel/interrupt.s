@@ -3,7 +3,7 @@
 	.type isr\index, @function
 	isr\index:
 		cli // disable interruts
-		pushl $0 // pushaa a dummy error code
+		pushl $0 // push a dummy error code
 		pushl $\index // push the interrupt index
 		jmp isr_common_stub
 .endm
@@ -17,8 +17,19 @@
 		jmp isr_common_stub
 .endm
 
-// isr_handler declared in isr.c
+.macro IRQ irq_no, int_no
+    .global irq\irq_no
+    .type irq\irq_no, @function
+    irq\irq_no:
+        cli 
+        pushl $0 // no error code
+        pushl $\int_no
+        jmp irq_common_stub
+.endm
+
+// declared in isr.c
 .extern isr__handler
+.extern irq__handler
 
 // This is our common ISR stub. It saves the processor state, sets
 // upt the kernel mode segments, calls the C-level fault handler
@@ -37,6 +48,32 @@ isr_common_stub:
 	movw %ax, %gs
 
 	call isr__handler
+
+	popl %eax // reload %ds
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %gs
+
+	popa // pop all registers
+	addl $8, %esp // clean error code and interrupt number
+	sti // enable interrupt
+	iret
+
+irq_common_stub:
+    pusha // pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+    
+    movw %ds, %ax
+    pushl %eax // save %ds
+
+    // load the kernel data segment descriptor
+	movw $0x10, %ax
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %gs
+
+	call irq__handler
 
 	popl %eax // reload %ds
 	movw %ax, %ds
@@ -81,3 +118,19 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
+IRQ 0, 32
+IRQ 1, 33
+IRQ 2, 34
+IRQ 3, 35
+IRQ 4, 36
+IRQ 5, 37
+IRQ 6, 38
+IRQ 7, 39
+IRQ 8, 40
+IRQ 9, 41
+IRQ 10, 42
+IRQ 11, 43
+IRQ 12, 44
+IRQ 13, 45
+IRQ 14, 46
+IRQ 15, 47

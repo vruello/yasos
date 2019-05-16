@@ -5,9 +5,10 @@
 BIN_NAME ?= os.bin
 ISO_NAME ?= os.iso
 ARCH ?= x86
-PROJDIRS = kernel/common kernel/$(ARCH) drivers/$(ARCH) boot/$(ARCH) 
+PROJDIRS = common $(ARCH) 
 LINKER_SCRIPT = linker.ld
-INCDIR := include
+COMMON_INCDIR := common/include
+ARCH_INCDIR := $(ARCH)/include
 
 ### 
 ### C SOURCE FILES
@@ -33,10 +34,12 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wredundant-decls -Wnested-externs -Winline -Wno-long-long \
             -Wconversion -Wstrict-prototypes
 
-CFLAGS := -g -std=gnu99 -ffreestanding $(WARNINGS) -I $(INCDIR) # -O2
+CFLAGS := -g -std=gnu99 -ffreestanding $(WARNINGS) -I $(COMMON_INCDIR) -I $(ARCH_INCDIR) # -O2
 LDFLAGS := -T $(LINKER_SCRIPT) -ffreestanding -nostdlib -lgcc # - O2
 CC := i386-elf-gcc
 AS := i386-elf-as
+QEMU := qemu-system-i386
+
 
 ###
 ### BUILD RULES
@@ -61,7 +64,7 @@ $(BIN_NAME): $(ASM_OBJFILES) $(C_OBJFILES)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 run: os.iso
-	qemu-system-i386 -cdrom $<
+	$(QEMU) -cdrom $<
 
 clean:
 	rm -rf *.bin *.o *.iso

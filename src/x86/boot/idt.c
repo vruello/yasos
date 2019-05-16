@@ -2,7 +2,8 @@
 #include <stddef.h>
 #include "idt.h"
 #include "gdt.h"
-#include "kernel/common/libk/string.h"
+#include "libk/string.h"
+#include "drivers/io.h"
 
 struct idt_entry {
     uint16_t base_low; // the lower 16 bits to the address to jump to
@@ -23,10 +24,29 @@ typedef struct idt_ptr idt_ptr_t;
 
 static void idt__set_entry(size_t index, uint32_t base, uint16_t sel,
         uint8_t flags);
+static void idt__pic_remap(uint8_t offset1, uint8_t offset2); 
 extern void idt__flush(uint32_t);
 
 #define IDT_SIZE 256
 #define IDT_FLAGS 0x8E
+
+#define PIC1		0x20		/* IO base address for master PIC */
+#define PIC2		0xA0		/* IO base address for slave PIC */
+#define PIC1_COMMAND	PIC1
+#define PIC1_DATA	(PIC1+1)
+#define PIC2_COMMAND	PIC2
+#define PIC2_DATA	(PIC2+1)
+#define ICW1_ICW4	0x01		/* ICW4 (not) needed */
+#define ICW1_SINGLE	0x02		/* Single (cascade) mode */
+#define ICW1_INTERVAL4	0x04		/* Call address interval 4 (8) */
+#define ICW1_LEVEL	0x08		/* Level triggered (edge) mode */
+#define ICW1_INIT	0x10		/* Initialization - required! */
+ 
+#define ICW4_8086	0x01		/* 8086/88 (MCS-80/85) mode */
+#define ICW4_AUTO	0x02		/* Auto (normal) EOI */
+#define ICW4_BUF_SLAVE	0x08		/* Buffered mode/slave */
+#define ICW4_BUF_MASTER	0x0C		/* Buffered mode/master */
+#define ICW4_SFNM	0x10		/* Special fully nested (not) */
 
 static idt_entry_t idt_entries[IDT_SIZE];
 static idt_ptr_t idt;
@@ -78,6 +98,8 @@ void idt__init() {
     // Initialize idt_entries memory
     memset(idt_entries, 0, sizeof(idt_entry_t) * IDT_SIZE);
     
+    idt__pic_remap(0x20, 0x28);
+
     // Set 32 CPU-decicated interrupt handlers
     idt__set_entry(0, (uint32_t) isr0, KERN_CODE_SEG, IDT_FLAGS);
     idt__set_entry(1, (uint32_t) isr1, KERN_CODE_SEG, IDT_FLAGS);
@@ -125,4 +147,30 @@ static void idt__set_entry(size_t index, uint32_t base, uint16_t sel,
     
     idt_entries[index].sel = sel;
     idt_entries[index].flags = flags;
+}
+
+static void idt__pic_remap(uint8_t offset1, uint8_t offset2) {
+    uint8_t a1, a2;
+    a1 = inb(PIC1_DATA); // save masks
+    a2 = inb(PIC2_DATA);
+
+    // start the init sequence in cascade mode
+    outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+    outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+
+    // ICW2 : Master PIC vector offset
+    outb(PIC1_DATA, offset1);
+    outb(PIC2_DATA, offset2);
+
+    // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
+    outb(PIC1_DATA, 4);
+    // ICW3: tell Slave PIC its cascade identity (0000 0010)
+    outb(PIC2_DATA, 2);
+
+    outb(PIC1_DATA, ICW4_8086);
+    outb(PIC2_DATA, ICW4_8086);
+
+    // Restore masks
+    outb(PIC1_DATA, a1);
+    outb(PIC2_DATA, a2);
 }

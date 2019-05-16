@@ -1,5 +1,7 @@
+#ifndef REGISTERS_H
+#define REGISTERS_H
+
 #include <stdint.h>
-#include "drivers/vga.h"
 
 struct registers {
     uint32_t ds; // saved ds
@@ -10,14 +12,4 @@ struct registers {
 
 typedef struct registers registers_t;
 
-void isr__handler(registers_t regs) {
-   vga__writestring("received interrupt: ");
-   vga__writedec(regs.int_no);
-   vga__putchar('\n');
-
-   if (regs.err_code != 0) {
-       vga__writestring("with error code: ");
-       vga__writedec(regs.err_code);
-       vga__putchar('\n');
-   }
-}
+#endif

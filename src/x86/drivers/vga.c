@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "drivers/vga.h"
-#include "kernel/common/libk/string.h"
+#include "libk/string.h"
 #include "drivers/io.h"
 
 #define VGA_WIDTH 80

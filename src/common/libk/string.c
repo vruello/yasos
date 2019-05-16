@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "kernel/common/libk/string.h"
+#include "libk/string.h"
 
 size_t strlen(const char* str) 
 {
