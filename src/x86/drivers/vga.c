@@ -11,11 +11,15 @@
 #define VGA_DATA_PORT 0x3D5
 #define VGA_HIGH_CURSOR_BYTE 14
 #define VGA_LOW_CURSOR_BYTE 15
+#define VGA_TAB_SIZE 4
 
 static inline uint8_t vga__entry_color(enum vga_color fg, enum vga_color bg);
 static inline uint16_t vga__entry(char uc, uint8_t color);
 static void vga__move_cursor(void);
 static void vga__scroll(void);
+static void vga__deletechar(void);
+static size_t vga__get_index(uint8_t column, uint8_t row);
+uint16_t vga__get_entry(uint8_t column, uint8_t row);
 
 static uint8_t terminal_row;
 static uint8_t terminal_column;
@@ -80,17 +84,60 @@ void vga__setcolor(uint8_t color)
 {
 	terminal_color = color;
 }
- 
+
+size_t vga__get_index(uint8_t column, uint8_t row) {
+    return (size_t) (column + VGA_WIDTH * row);
+}
+
+uint16_t vga__get_entry(uint8_t column, uint8_t row) {
+    size_t index = vga__get_index(column, row);
+    return terminal_buffer[index];
+}
+
 void vga__putentryat(char c, uint8_t color, size_t x, size_t y) 
 {
 	const size_t index = y * VGA_WIDTH + x;
 	terminal_buffer[index] = vga__entry(c, color);
 }
 
+void vga__deletechar() {
+    if (terminal_column > 0) {
+        terminal_column--;
+        vga__putentryat(' ', terminal_color, terminal_column, terminal_row);
+    }
+    else if (terminal_row > 0) {
+        terminal_row--;
+        terminal_column = VGA_WIDTH - 1;
+        while (terminal_column > 0 && (vga__get_entry(terminal_column, terminal_row) & 0xff) == ' ') {
+            terminal_column--;
+        }
+        if (terminal_column > 0) {
+            terminal_column++;
+        }
+    
+    }
+    vga__move_cursor();
+    return;
+}
+
 void vga__putchar(char c) 
 {
     if (c == '\n') {
         terminal_column = VGA_WIDTH - 1;
+    }
+    else if (c == '\t') {
+        uint8_t spaces_number = (uint8_t) VGA_TAB_SIZE - (uint8_t) (terminal_column % VGA_TAB_SIZE);
+        uint8_t next_term_column = (uint8_t) (terminal_column + spaces_number);
+        if (next_term_column < VGA_WIDTH) {
+            for (size_t i = 0; i < spaces_number; i++) {
+                vga__putchar(' ');
+            }
+        }
+        return;
+    }
+    else if (c == '\b') {
+       vga__deletechar();
+       return;
     }
     else {
     	vga__putentryat(c, terminal_color, terminal_column, terminal_row);

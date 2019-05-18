@@ -26,14 +26,10 @@ void kernel_main(void) {
 
     /* Initialize the PIT */
     pit__init(100);
-
-    /* Newline support is left as an exercise. */
-	for (uint32_t i = 0; i < 100; i++) {
-        vga__writestring("Hello, kernel World ");
-        vga__writedec(i);
-        vga__putchar('\n');
-        for (int j = 0; j < 10000000; j++);
-    }
-
+    
+    /* Initialize the keyboard */
+    keyboard__init();
+   
+    /* Infinite loop */
     while(1);
 }

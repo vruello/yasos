@@ -17,9 +17,9 @@ uint32_t tick = 0;
 
 void timer_callback(registers_t regs) {
     tick++;
-    vga__writestring("Tick ");
-    vga__writedec(tick);
-    vga__putchar('\n');
+    // vga__writestring("Tick ");
+    // vga__writedec(tick);
+    // vga__putchar('\n');
 }
 
 void pit__init(uint32_t frequency) {
