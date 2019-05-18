@@ -21,7 +21,7 @@
     .global irq\irq_no
     .type irq\irq_no, @function
     irq\irq_no:
-        cli 
+        cli // disable interrupts
         pushl $0 // no error code
         pushl $\int_no
         jmp irq_common_stub

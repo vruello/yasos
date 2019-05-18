@@ -12,7 +12,6 @@
 void irq__handler(registers_t);
 
 void irq__handler(registers_t regs) {
-
     // Send an EOI (End Of Interrupt) signal to the PICs.
     
     // Send reset signal to master

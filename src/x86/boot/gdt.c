@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "gdt.h"
+#include "boot/gdt.h"
 
 struct gdt_entry {
     uint16_t limit_low; // The lower 16 bits of the limit 

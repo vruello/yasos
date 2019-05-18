@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "idt.h"
-#include "gdt.h"
+#include "boot/idt.h"
+#include "boot/gdt.h"
 #include "libk/string.h"
 #include "drivers/io.h"
 
@@ -25,7 +25,9 @@ typedef struct idt_ptr idt_ptr_t;
 static void idt__set_entry(size_t index, uint32_t base, uint16_t sel,
         uint8_t flags);
 static void idt__pic_remap(uint8_t offset1, uint8_t offset2); 
+
 extern void idt__flush(uint32_t);
+extern void idt__sti();
 
 #define IDT_SIZE 256
 #define IDT_FLAGS 0x8E
@@ -88,6 +90,23 @@ extern void isr29(void);
 extern void isr30(void);
 extern void isr31(void);
 
+extern void irq0(void);
+extern void irq1(void);
+extern void irq2(void);
+extern void irq3(void);
+extern void irq4(void);
+extern void irq5(void);
+extern void irq6(void);
+extern void irq7(void);
+extern void irq8(void);
+extern void irq9(void);
+extern void irq10(void);
+extern void irq11(void);
+extern void irq12(void);
+extern void irq13(void);
+extern void irq14(void);
+extern void irq15(void);
+
 /**
  * Initialize the IDT table
  */
@@ -97,8 +116,6 @@ void idt__init() {
    
     // Initialize idt_entries memory
     memset(idt_entries, 0, sizeof(idt_entry_t) * IDT_SIZE);
-    
-    idt__pic_remap(0x20, 0x28);
 
     // Set 32 CPU-decicated interrupt handlers
     idt__set_entry(0, (uint32_t) isr0, KERN_CODE_SEG, IDT_FLAGS);
@@ -133,8 +150,33 @@ void idt__init() {
     idt__set_entry(29, (uint32_t) isr29, KERN_CODE_SEG, IDT_FLAGS);
     idt__set_entry(30, (uint32_t) isr30, KERN_CODE_SEG, IDT_FLAGS);
     idt__set_entry(31, (uint32_t) isr31, KERN_CODE_SEG, IDT_FLAGS);
+
+    // Remap the PIC
+    idt__pic_remap(0x20, 0x28);
+
+    // Add IRQ handlers
+    idt__set_entry(32, (uint32_t) irq0, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(33, (uint32_t) irq1, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(34, (uint32_t) irq2, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(35, (uint32_t) irq3, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(36, (uint32_t) irq4, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(37, (uint32_t) irq5, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(38, (uint32_t) irq6, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(39, (uint32_t) irq7, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(40, (uint32_t) irq8, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(41, (uint32_t) irq9, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(42, (uint32_t) irq10, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(43, (uint32_t) irq11, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(44, (uint32_t) irq12, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(45, (uint32_t) irq13, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(46, (uint32_t) irq14, KERN_CODE_SEG, IDT_FLAGS);
+    idt__set_entry(47, (uint32_t) irq15, KERN_CODE_SEG, IDT_FLAGS);
     
+    // Flush the idt table
     idt__flush((uint32_t)&idt);
+
+    // Enable interruptions
+    idt__sti();
 }
 
 /**
@@ -144,7 +186,7 @@ static void idt__set_entry(size_t index, uint32_t base, uint16_t sel,
         uint8_t flags) {
     idt_entries[index].base_low = (uint16_t) base & 0xffff;
     idt_entries[index].base_high = (uint16_t) (base >> 16) & 0xffff;
-    
+    idt_entries[index].zero = 0;
     idt_entries[index].sel = sel;
     idt_entries[index].flags = flags;
 }
