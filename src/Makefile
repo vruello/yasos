@@ -64,7 +64,7 @@ $(BIN_NAME): $(ASM_OBJFILES) $(C_OBJFILES)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 run: os.iso
-	$(QEMU) -cdrom $<
+	$(QEMU) -cdrom $< -soundhw pcspk
 
 clean:
 	rm -rf *.bin *.o *.iso

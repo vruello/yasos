@@ -2,6 +2,8 @@
 #include "drivers/vga.h"
 #include "kernel/registers.h"
 
+void isr__handler(registers_t regs);
+
 void isr__handler(registers_t regs) {
    vga__writestring("received interrupt: ");
    vga__writedec(regs.int_no);

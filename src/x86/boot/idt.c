@@ -27,7 +27,7 @@ static void idt__set_entry(size_t index, uint32_t base, uint16_t sel,
 static void idt__pic_remap(uint8_t offset1, uint8_t offset2); 
 
 extern void idt__flush(uint32_t);
-extern void idt__sti();
+extern void idt__sti(void);
 
 #define IDT_SIZE 256
 #define IDT_FLAGS 0x8E
