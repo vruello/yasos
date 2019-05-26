@@ -1,11 +1,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "kernel/utils.h"
 #include "drivers/vga.h"
 #include "boot/descriptor_tables.h"
 #include "drivers/pit.h"
 #include "drivers/keyboard.h"
 #include "drivers/pc_speaker.h"
+#include "kernel/paging.h"
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -31,16 +33,23 @@ void kernel_main(void) {
     
     /* Initialize the keyboard */
     keyboard__init();
-    
+   
+    /* Initialize paging */
+    paging__init();
+
     /* Play a welcome frightening sound */
     pc_speaker__play(340);
-    for (int i = 0; i < 100000000; i++);
+    for (volatile int i = 0; i < 100000000; i++);
     pc_speaker__stop();
-    for (int i = 0; i < 100000000; i++);
+    for (volatile int i = 0; i < 100000000; i++);
     pc_speaker__play(480);
-    for (int i = 0; i < 100000000; i++);
+    for (volatile int i = 0; i < 100000000; i++);
     pc_speaker__stop();
 
     /* Infinite loop */
-    while(1);
+    for(;;) {
+        __asm__ __volatile__ ("hlt");
+    };
+
+    PANIC("This should never happen...");
 }

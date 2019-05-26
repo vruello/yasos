@@ -19,12 +19,14 @@ static void vga__move_cursor(void);
 static void vga__scroll(void);
 static void vga__deletechar(void);
 static size_t vga__get_index(uint8_t column, uint8_t row);
-uint16_t vga__get_entry(uint8_t column, uint8_t row);
+static uint16_t vga__get_entry(uint8_t column, uint8_t row);
+static void vga__writehexhalfbyte(uint8_t n);
 
 static uint8_t terminal_row;
 static uint8_t terminal_column;
 static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
+static const char* HEX_CHARS = "0123456789abcdef";
 
 static inline uint8_t vga__entry_color(enum vga_color fg, enum vga_color bg) 
 {
@@ -85,11 +87,11 @@ void vga__setcolor(uint8_t color)
 	terminal_color = color;
 }
 
-size_t vga__get_index(uint8_t column, uint8_t row) {
+static size_t vga__get_index(uint8_t column, uint8_t row) {
     return (size_t) (column + VGA_WIDTH * row);
 }
 
-uint16_t vga__get_entry(uint8_t column, uint8_t row) {
+static uint16_t vga__get_entry(uint8_t column, uint8_t row) {
     size_t index = vga__get_index(column, row);
     return terminal_buffer[index];
 }
@@ -100,7 +102,7 @@ void vga__putentryat(char c, uint8_t color, size_t x, size_t y)
 	terminal_buffer[index] = vga__entry(c, color);
 }
 
-void vga__deletechar() {
+static void vga__deletechar() {
     if (terminal_column > 0) {
         terminal_column--;
         vga__putentryat(' ', terminal_color, terminal_column, terminal_row);
@@ -181,5 +183,32 @@ void vga__writedec(uint32_t n) {
 
     for (; i > 0; i--) {
         vga__putchar((char) (0x30 + digits[i-1]));
+    }
+}
+
+
+static void vga__writehexhalfbyte(uint8_t n) {
+    vga__putchar(HEX_CHARS[n]);
+}
+
+void vga__writehexbyte(uint8_t n) {
+    vga__writehexhalfbyte(n >> 4);
+    vga__writehexhalfbyte(n & 0xf);
+}
+
+void vga__writehex(uint32_t n) {
+    vga__writestring("0x");
+    vga__writehexbyte((uint8_t) (n >> (8*3)));
+    n &= 0xffffff;
+    vga__writehexbyte((uint8_t) (n >> (8*2)));
+    n &= 0xffff;
+    vga__writehexbyte((uint8_t) (n >> 8));
+    n &= 0xff;
+    vga__writehexbyte((uint8_t) n);
+}
+
+void vga__writebits(uint32_t n) {
+    for (size_t i = 0; i < 32; i++) {
+        vga__putchar('0' + (uint8_t) ((n >> (31-i)) & 1));
     }
 }

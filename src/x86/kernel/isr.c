@@ -1,17 +1,13 @@
 #include <stdint.h>
 #include "drivers/vga.h"
 #include "kernel/registers.h"
+#include "kernel/interrupt_handlers.h"
 
-void isr__handler(registers_t regs);
+void isr__handler(registers_t* regs);
 
-void isr__handler(registers_t regs) {
-   vga__writestring("received interrupt: ");
-   vga__writedec(regs.int_no);
-   vga__putchar('\n');
-
-   if (regs.err_code != 0) {
-       vga__writestring("with error code: ");
-       vga__writedec(regs.err_code);
-       vga__putchar('\n');
+void isr__handler(registers_t* regs) {
+    int_handler_t handler = interrupt_handlers__get((uint8_t) regs->int_no);
+   if (handler != NULL) {
+       handler(regs);
    }
 }

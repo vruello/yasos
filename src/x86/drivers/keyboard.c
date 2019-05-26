@@ -17,7 +17,7 @@
 #define CAPS_LOCK 0x3A
 #define ENTER_ASCII_CODE 13
 
-void keyboard_callback(registers_t regs);
+void keyboard_callback(registers_t* regs);
 
 static bool shift = false;
 static bool alt = false;
@@ -35,7 +35,7 @@ char set1_to_ascii[] = {
 
 size_t set1_to_ascii_size = sizeof(set1_to_ascii);
 
-void keyboard_callback(registers_t regs) {
+void keyboard_callback(registers_t* regs) {
     // TODO : keyboard driver should take a higher level handler and gives
     // it a structure entry representing the key combination
     uint8_t value = inb(KEYBOARD_READ_PORT);

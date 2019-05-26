@@ -46,9 +46,10 @@ isr_common_stub:
 	movw %ax, %es
 	movw %ax, %fs
 	movw %ax, %gs
-
+    
+    pushl %esp
 	call isr__handler
-
+    popl %ebx
 	popl %eax // reload %ds
 	movw %ax, %ds
 	movw %ax, %es
@@ -72,8 +73,10 @@ irq_common_stub:
 	movw %ax, %es
 	movw %ax, %fs
 	movw %ax, %gs
+    pushl %esp
 
 	call irq__handler
+    popl %ebx
 
 	popl %eax // reload %ds
 	movw %ax, %ds
@@ -103,7 +106,7 @@ ISR_ERRCODE 13
 ISR_ERRCODE 14
 ISR_NOERRCODE 15
 ISR_NOERRCODE 16
-ISR_NOERRCODE 17
+ISR_ERRCODE 17
 ISR_NOERRCODE 18
 ISR_NOERRCODE 19
 ISR_NOERRCODE 20
@@ -116,7 +119,7 @@ ISR_NOERRCODE 26
 ISR_NOERRCODE 27
 ISR_NOERRCODE 28
 ISR_NOERRCODE 29
-ISR_NOERRCODE 30
+ISR_ERRCODE 30
 ISR_NOERRCODE 31
 IRQ 0, 32
 IRQ 1, 33

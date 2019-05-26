@@ -21,7 +21,7 @@
 #define IRQ14 46
 #define IRQ15 47
 
-typedef void (*int_handler_t)(registers_t);
+typedef void (*int_handler_t)(registers_t*);
 void interrupt_handlers__register(uint8_t num, int_handler_t handler);
 int_handler_t interrupt_handlers__get(uint8_t num);
 

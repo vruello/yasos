@@ -14,13 +14,13 @@
 #define PIT_CH1_PORT 0x41
 #define PIT_CH2_PORT 0x42
 
-void timer_callback(registers_t regs);
+void timer_callback(registers_t* regs);
 
 
 static uint8_t io_ports[] = {PIT_CH0_PORT, PIT_CH1_PORT, PIT_CH2_PORT};
 static uint32_t tick = 0;
 
-void timer_callback(registers_t regs) {
+void timer_callback(registers_t* regs) {
     tick++;
     // vga__writestring("Tick ");
     // vga__writedec(tick);

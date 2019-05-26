@@ -31,5 +31,8 @@ void vga__putchar(char c);
 void vga__write(const char* data, size_t size); 
 void vga__writestring(const char* data);
 void vga__writedec(uint32_t n);
+void vga__writehex(uint32_t n);
+void vga__writehexbyte(uint8_t n);
+void vga__writebits(uint32_t n);
 
 #endif
