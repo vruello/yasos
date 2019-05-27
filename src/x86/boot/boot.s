@@ -85,6 +85,8 @@ _start:
 	stack since (pushed 0 bytes so far) and the alignment is thus
 	preserved and the call is well defined.
 	*/
+
+	pushl %ebx  // contains the multiboot info address provided by GRUB
 	call kernel_main
 
 	/*
