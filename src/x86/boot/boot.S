@@ -30,11 +30,26 @@ System V ABI standard and de-facto extensions. The compiler will assume the
 stack is properly aligned and failure to align the stack will result in
 undefined behavior.
 */
-.section .bss
+.section .bootstrap_stack, "aw", @nobits
 .align 16
 stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
+
+
+/* Preallocate pages used for paging without using hard-code addresses. */
+.section .bss, "aw", @nobits
+.align 0x1000 // align on pages
+boot_page_directory:
+.skip 0x1000 // 4 * 1024 entries
+boot_page_table1:
+.skip 0x1000 // 4 * 1024 entries
+
+/* 
+WARNING : We only allocate the first 4MiB of physical memory, while the fist
+1MiB is reserved for BIOS/Multiboot/Hardware.
+ANother page table will be required if the kernel grows byond 3 MiB.
+*/
 
 /*
 The linker script specifies _start as the entry point to the kernel and the
@@ -55,9 +70,70 @@ _start:
 	function, unless the kernel provides its own <stdio.h> header and a
 	printf implementation. There are no security restrictions, no
 	safeguards, no debugging mechanisms, only what the kernel provides
-	itself. It has absolute and complete power over the
-	machine.
+	itself. It has absolute and complete power over the machine.
 	*/
+	
+	/* 
+	We need to set up paging so that we can load the Virtualy addressed
+	kernel.
+	0x0 - 0x3FFFFF (P) <----> 0xC0000000 - 0xC003FFFFF (V)
+	To avoid faults after enabling paging, we also need to setup a
+	temporary identity mapping : 
+	0x0 - 0x3FFFFF (P) <----> 0x0 - 0x3FFFFF (V)
+	*/
+
+	/* Physical address of boot_page_table1 in %edi */
+	movl $(boot_page_table1 - 0xC0000000), %edi
+	/* First address to map is 0x0 */
+	movl $0, %esi
+	/* Map 1024 pages */
+	movl $1024, %ecx
+
+1:
+	/* %edx contains a PTE */
+	movl %esi, %edx
+	/* set PTE flags : PRESENT + WRITABLE */
+	orl $0x3, %edx
+	/* write PTE in page table */
+	movl %edx, (%edi)
+	
+	/* size of pages is 0x1000 */
+	addl $0x1000, %esi
+	/* size of PTE is 4 bytes */
+	addl $4, %edi
+	/* decrements %ebx unless %ebx becomes 0 */
+	loop 1b
+	
+	/* Identity mapping : 0x0 - 0x3FFFFF
+	0x3 is the flag of the PDE : PRESENT + WRITABLE */
+	movl $(boot_page_table1 - 0xC0000000 + 0x3), boot_page_directory - 0xC0000000 + 0
+	/* Mapping : 0x0 - 0x3FFFFF <----> 0xC0000000 - 0xC03FFFFF
+	768 is the index of the PDE in the PD which represents the 0xC0000000 - 0xC0400000 
+	Each PDE is 4 bytes long */
+	movl $(boot_page_table1 - 0xC0000000 + 0x3), boot_page_directory - 0xC0000000 + 768 * 4
+	
+	/* Put Page Directory physic address in %cr3 */
+	movl $(boot_page_directory - 0xC0000000), %ecx
+	movl %ecx, %cr3
+
+	/* Enable paging and the kernel write-protect bit */
+	movl %cr0, %ecx
+	orl $0x80010000, %ecx
+	movl %ecx, %cr0
+
+	/* Now paging is enabled! */
+
+	/* Make an absolute jump to higher half */
+	lea 4f, %ecx
+	jmp *%ecx
+
+4:
+	/* Now we are in higher half */
+
+	/* Reload %cr3 to flush the TLB */
+	movl %cr3, %ecx
+	movl %ecx, %cr3
+
 
 	/*
 	To set up a stack, we set the esp register to point to the top of the

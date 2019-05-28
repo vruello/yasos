@@ -33,6 +33,7 @@ void parse_multiboot_info(multiboot_info_t* mbi) {
         vga__writestring(" ; mem_upper: ");
         vga__writehex(mbi->mem_upper);
         vga__writestring("\n\n");
+        vga__setcolor(VGA_COLOR_LIGHT_GREY);
     }
 
     if (mbi->flags & MULTIBOOT_INFO_MEM_MAP) {
@@ -74,23 +75,23 @@ void parse_multiboot_info(multiboot_info_t* mbi) {
 }
 
 void kernel_main(multiboot_info_t* mbi) {
-    /* Initialize the descriptor tables */
-    descriptor_tables__init();
-
     /* Initialize terminal interface */
-	vga__initialize();
+    vga__initialize();
 
     /* Parse multiboot info */
     parse_multiboot_info(mbi);
+
+    /* Initialize the descriptor tables */
+    descriptor_tables__init();
+
+    /* Initialize paging */
+    paging__init();
 
     /* Initialize the PIT */
     pit__init(100);
     
     /* Initialize the keyboard */
     keyboard__init();
-   
-    /* Initialize paging */
-    paging__init();
 
     /* Play a welcome frightening sound */
     pc_speaker__play(340);

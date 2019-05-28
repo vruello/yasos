@@ -87,6 +87,11 @@ static void paging__free_frame(page_t* page) {
 }
 
 void paging__init() {
+    /*
+    TODO : Improve paging  
+    + put .text and .rodata sections READ-ONLY
+    + Unmap 0x0 - 0x3fffff since multiboot info has already been parsed 
+
     // Initiliaze frames bitset
     nframes = PHYSICAL_MEMORY_SIZE / FRAME_ALIGNMENT;
     frames_bitset_size = nframes / FRAMES_BY_BITSET_ENTRY;
@@ -105,12 +110,13 @@ void paging__init() {
         paging__alloc_frame(paging__get_page(i, true, kernel_directory), true, true); 
         i += FRAME_ALIGNMENT;
     }
+    */
 
     // Register a handler for PAGE_FAULT exception
     interrupt_handlers__register(PAGE_FAULT_EXCEPTION, paging__fault_handler);
     
     // Enable paging
-    paging__switch_page_directory(kernel_directory);
+    //paging__switch_page_directory(kernel_directory);
 }
 
 void paging__switch_page_directory(page_directory_t* dir) {

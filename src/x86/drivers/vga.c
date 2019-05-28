@@ -6,7 +6,7 @@
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
-#define VGA_ADDR 0xB8000
+#define VGA_ADDR 0xC00B8000
 #define VGA_CONTROL_PORT 0x3D4
 #define VGA_DATA_PORT 0x3D5
 #define VGA_HIGH_CURSOR_BYTE 14
