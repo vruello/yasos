@@ -22,8 +22,8 @@ C_DEPFILES := $(patsubst %.c,%.d,$(C_SRCFILES))
 ### ASM SOURCE FILES
 ###
 
-ASM_SRCFILES := $(shell find $(PROJDIRS) -type f -name "*.s")
-ASM_OBJFILES := $(patsubst %.s,%.o,$(ASM_SRCFILES))
+ASM_SRCFILES := $(shell find $(PROJDIRS) -type f -name "*.S")
+ASM_OBJFILES := $(patsubst %.S,%.o,$(ASM_SRCFILES))
 
 ###
 ### BUILD FLAGS
