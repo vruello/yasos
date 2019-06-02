@@ -20,13 +20,11 @@ static void vga__scroll(void);
 static void vga__deletechar(void);
 static size_t vga__get_index(uint8_t column, uint8_t row);
 static uint16_t vga__get_entry(uint8_t column, uint8_t row);
-static void vga__writehexhalfbyte(uint8_t n);
 
 static uint8_t terminal_row;
 static uint8_t terminal_column;
 static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
-static const char* HEX_CHARS = "0123456789abcdef";
 
 static inline uint8_t vga__entry_color(enum vga_color fg, enum vga_color bg) 
 {
@@ -163,52 +161,4 @@ void vga__write(const char* data, size_t size)
 void vga__writestring(const char* data) 
 {
 	vga__write(data, strlen(data));
-}
-
-void vga__writedec(uint32_t n) {
-    uint8_t digits[10]; // 10 is the maximal number of digits that
-                    // the decimal repr of an unsigned 32 bits
-                    // can have
-    size_t i = 0;
-
-    if (n == 0) {
-        digits[i++] = 0;
-    }
-
-    while (n > 0) {
-        digits[i] = (uint8_t) (n % 10); 
-        n /= 10;
-        i++;
-    }
-
-    for (; i > 0; i--) {
-        vga__putchar((char) (0x30 + digits[i-1]));
-    }
-}
-
-
-static void vga__writehexhalfbyte(uint8_t n) {
-    vga__putchar(HEX_CHARS[n]);
-}
-
-void vga__writehexbyte(uint8_t n) {
-    vga__writehexhalfbyte(n >> 4);
-    vga__writehexhalfbyte(n & 0xf);
-}
-
-void vga__writehex(uint32_t n) {
-    vga__writestring("0x");
-    vga__writehexbyte((uint8_t) (n >> (8*3)));
-    n &= 0xffffff;
-    vga__writehexbyte((uint8_t) (n >> (8*2)));
-    n &= 0xffff;
-    vga__writehexbyte((uint8_t) (n >> 8));
-    n &= 0xff;
-    vga__writehexbyte((uint8_t) n);
-}
-
-void vga__writebits(uint32_t n) {
-    for (size_t i = 0; i < 32; i++) {
-        vga__putchar('0' + (uint8_t) ((n >> (31-i)) & 1));
-    }
 }

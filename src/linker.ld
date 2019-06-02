@@ -28,7 +28,7 @@ SECTIONS
 	{
 		*(.rodata)
 	}
- 
+    
     _kernel_read_only_end = . ;
 
 	/* Read-write data (initialized) */
@@ -42,6 +42,7 @@ SECTIONS
 	{
 		*(COMMON)
 		*(.bss)
+        *(.bootstrap_heap)
 		*(.bootstrap_stack)
 	}
 

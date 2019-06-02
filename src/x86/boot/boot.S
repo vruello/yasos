@@ -36,6 +36,12 @@ stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
 
+.section .bootstrap_heap, "aw", @nobits
+.global bootstrap_heap_start
+bootstrap_heap_start:
+.skip 262144 # 256 KiB
+.global bootstrap_heap_end
+bootstrap_heap_end:
 
 /* Preallocate pages used for paging without using hard-code addresses. */
 .section .bss, "aw", @nobits
@@ -44,6 +50,7 @@ boot_page_directory:
 .skip 0x1000 // 4 * 1024 entries
 boot_page_table1:
 .skip 0x1000 // 4 * 1024 entries
+
 
 /* 
 WARNING : We only allocate the first 4MiB of physical memory, while the fist
@@ -86,10 +93,66 @@ _start:
 	movl $(boot_page_table1 - 0xC0000000), %edi
 	/* First address to map is 0x0 */
 	movl $0, %esi
-	/* Map 1024 pages */
-	movl $1024, %ecx
+	/* Map the first 256 pages (bios+grub zone) RW */
+	movl $256, %ecx 
+	
+loop_first_256:
+	/* %edx contains a PTE */
+	movl %esi, %edx
+	/* set PTE flags : PRESENT + WRITABLE */
+	orl $0x3, %edx
+	/* write PTE in Page Table */
+	movl %edx, (%edi)
+	
+	/* size of pages is 0x1000 */
+	addl $0x1000, %esi
+	/* size of PTE is 4 bytes */
+	addl $4, %edi
+	/* decrements %ecx unless %ecx becomes 0 */
+	loop loop_first_256
+	
 
-1:
+	/* Map kernel read only pages (.text and .rodata) */
+	movl $(_kernel_read_only_end), %ecx
+	subl $(_kernel_start), %ecx
+
+	/* If the end of read only section is not aligned with 0x1000
+	 * add one more read only page */
+	movl %ecx, %eax
+	shrl $12, %ecx
+	andl $0xfff, %eax
+	cmpl $0, %eax
+	jz loop_read_only_kernel
+	addl $1, %ecx
+
+loop_read_only_kernel:
+	/* %edx contains a PTE */
+	movl %esi, %edx
+	/* set PTE flags : PRESENT */
+	orl $0x1, %edx
+	/* write PTE in page table */
+	movl %edx, (%edi)
+	
+	/* size of pages is 0x1000 */
+	addl $0x1000, %esi
+	/* size of PTE is 4 bytes */
+	addl $4, %edi
+	/* decrements %ecx unless %ecx becomes 0 */
+	loop loop_read_only_kernel
+
+	/* Map the remaining pages of the pages table */
+	movl $(_kernel_end), %ecx
+	subl $(_kernel_read_only_end), %ecx
+	/* If the end of section is not aligned with 0x1000
+	 * add one more read only page */
+	movl %ecx, %eax
+	shrl $12, %ecx
+	andl $0xfff, %eax
+	cmpl $0, %eax
+	jz loop_writable_kernel
+	addl $1, %ecx
+
+loop_writable_kernel:
 	/* %edx contains a PTE */
 	movl %esi, %edx
 	/* set PTE flags : PRESENT + WRITABLE */
@@ -101,9 +164,9 @@ _start:
 	addl $0x1000, %esi
 	/* size of PTE is 4 bytes */
 	addl $4, %edi
-	/* decrements %ebx unless %ebx becomes 0 */
-	loop 1b
-	
+	/* decrements %ecx unless %ecx becomes 0 */
+	loop loop_writable_kernel
+
 	/* Identity mapping : 0x0 - 0x3FFFFF
 	0x3 is the flag of the PDE : PRESENT + WRITABLE */
 	movl $(boot_page_table1 - 0xC0000000 + 0x3), boot_page_directory - 0xC0000000 + 0
@@ -112,7 +175,15 @@ _start:
 	Each PDE is 4 bytes long */
 	movl $(boot_page_table1 - 0xC0000000 + 0x3), boot_page_directory - 0xC0000000 + 768 * 4
 	
-	/* Put Page Directory physic address in %cr3 */
+	/* Map the last PDE to the page directory itself to access PTE from
+	 * virtual memory 
+     * PD entries can be accessed at 0xfffff000 (from 0xfffff000 to 0xffffffff)
+     * For one PD entry (let's say 768), PT entries can be accessed
+     * at 0xffc00000 + (768 << 12) (so from 0xfff00000 to 0xfff00fff)
+     */
+	movl $(boot_page_directory - 0xC0000000 + 0x3), boot_page_directory - 0xC0000000 + 1023 * 4
+	
+	/* Put Page Directory physical address in %cr3 */
 	movl $(boot_page_directory - 0xC0000000), %ecx
 	movl %ecx, %cr3
 
@@ -124,12 +195,15 @@ _start:
 	/* Now paging is enabled! */
 
 	/* Make an absolute jump to higher half */
-	lea 4f, %ecx
+	lea higher_half_kernel, %ecx
 	jmp *%ecx
 
-4:
+higher_half_kernel:
 	/* Now we are in higher half */
-
+	
+	/* Unmap identity mapping */
+	movl $0, boot_page_directory + 0
+	
 	/* Reload %cr3 to flush the TLB */
 	movl %cr3, %ecx
 	movl %ecx, %cr3
@@ -162,7 +236,9 @@ _start:
 	preserved and the call is well defined.
 	*/
 
+	pushl %ecx // contains the physical addr of the current Page Directory
 	pushl %ebx  // contains the multiboot info address provided by GRUB
+	
 	call kernel_main
 
 	/*

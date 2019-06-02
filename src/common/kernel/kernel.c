@@ -8,8 +8,11 @@
 #include "drivers/pit.h"
 #include "drivers/keyboard.h"
 #include "drivers/pc_speaker.h"
-#include "kernel/paging.h"
 #include "boot/multiboot.h"
+#include "kernel/pmm.h"
+#include "kernel/kmem.h"
+#include "libk/stdio.h"
+#include "kernel/vmm.h"
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -21,78 +24,46 @@
 #error "This tutorial needs to be compiled with a ix86-elf compiler"
 #endif
 
+#define KERNEL_OFFSET 0xC0000000
+
 void kernel_main(multiboot_info_t* mbi);
-void parse_multiboot_info(multiboot_info_t* mbi);
-
-void parse_multiboot_info(multiboot_info_t* mbi) {
-    if (mbi->flags & MULTIBOOT_INFO_MEMORY) {
-        // the mem_* fields are valid
-        vga__setcolor(VGA_COLOR_LIGHT_BLUE);
-        vga__writestring("mem_lower: ");
-        vga__writehex(mbi->mem_lower);
-        vga__writestring(" ; mem_upper: ");
-        vga__writehex(mbi->mem_upper);
-        vga__writestring("\n\n");
-        vga__setcolor(VGA_COLOR_LIGHT_GREY);
-    }
-
-    if (mbi->flags & MULTIBOOT_INFO_MEM_MAP) {
-        // the mmap_* fields are valid
-        uint32_t size = 0;
-        uint32_t total_phy_memory = 0;
-        vga__setcolor(VGA_COLOR_LIGHT_GREEN);
-        vga__writestring("mmap_addr: ");
-        vga__writehex(mbi->mmap_addr);
-        vga__writestring("\nmmap_length: ");
-        vga__writedec(mbi->mmap_length);
-        vga__writestring("\n\n");
-        multiboot_memory_map_t* mmap = (multiboot_memory_map_t*) (mbi->mmap_addr);
-        while (size < mbi->mmap_length) {
-            // vga__writestring("size: ");
-            // vga__writedec(mmap->size);
-            vga__writestring("addr_high: ");
-            vga__writehex(mmap->addr_high);
-            vga__writestring(" ; addr_low: ");
-            vga__writehex(mmap->addr_low);
-            vga__writestring(" ; len: ");
-            vga__writehex(mmap->len_low);
-            //vga__writestring("\nlen_high: ");
-            //vga__writehex(mmap->len_high);
-            vga__writestring(" ; type: ");
-            vga__writedec(mmap->type);
-            vga__putchar('\n');
-            if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-                total_phy_memory += mmap->len_low;
-            }
-            size += mmap->size + 4;
-            mmap = (multiboot_memory_map_t*) (mbi->mmap_addr + size);
-        }
-        vga__writestring("\nAvailable memory: ");
-        vga__writedec(total_phy_memory);
-        vga__putchar('\n');
-        vga__setcolor(VGA_COLOR_LIGHT_GREY);
-    }
-}
 
 void kernel_main(multiboot_info_t* mbi) {
     /* Initialize terminal interface */
     vga__initialize();
 
-    /* Parse multiboot info */
-    parse_multiboot_info(mbi);
-
+    /* Initialize stdio with vga primitives */
+    stdio__init(vga__putchar, vga__writestring);
+    
+    /* Initialize bootstrap heap */
+    kmem__bootstrap_init();
+    
+    /* Initialize Physical Memory Manager */
+    // Translate mbi into its virtual address
+    mbi = (multiboot_info_t*) ((char*) mbi + KERNEL_OFFSET);
+    if (mbi->flags & MULTIBOOT_INFO_MEM_MAP) {
+        pmm__init((multiboot_memory_map_t*) ((char*) mbi->mmap_addr + KERNEL_OFFSET), mbi->mmap_length);
+    }
+    else {
+        PANIC("No information about available memory.");
+    }
+    
     /* Initialize the descriptor tables */
     descriptor_tables__init();
-
-    /* Initialize paging */
-    paging__init();
+    
+    /* Initialize Virtual Memory Manager */
+    vmm__init();
+ 
+    /* Initialize real heap */
+    kmem__init();  
 
     /* Initialize the PIT */
     pit__init(100);
     
     /* Initialize the keyboard */
     keyboard__init();
-
+    
+#if 1
     /* Play a welcome frightening sound */
     pc_speaker__play(340);
     for (volatile int i = 0; i < 100000000; i++);
@@ -101,7 +72,16 @@ void kernel_main(multiboot_info_t* mbi) {
     pc_speaker__play(480);
     for (volatile int i = 0; i < 100000000; i++);
     pc_speaker__stop();
-
+#endif
+    
+    uint32_t* test = kmem__alloc(sizeof(uint32_t) * 10, 0);
+    printf("test: 0x%x\n", test);
+    for (size_t i = 0; i < 10; i++) {
+        test[i] = i;
+        printf("test[%u] = %u\n", i, test[i]);
+    }
+    kmem__free(test);
+    
     /* Infinite loop */
     for(;;) {
         __asm__ __volatile__ ("hlt");

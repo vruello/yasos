@@ -4,9 +4,9 @@
 
 #include "drivers/keyboard.h"
 #include "kernel/registers.h"
-#include "drivers/vga.h"
 #include "kernel/interrupt_handlers.h"
 #include "drivers/io.h"
+#include "libk/stdio.h"
 
 #define KEYBOARD_READ_PORT 0x60
 
@@ -80,7 +80,7 @@ void keyboard_callback(registers_t* regs) {
             
             // printable character
             if ((out >= 33 && out <= 126) || out == ' ' || out == '\n' || out == '\b' || out == '\t') {
-                vga__putchar(out);
+                putchar(out);
             }
         }    
     }
